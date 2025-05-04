@@ -335,7 +335,7 @@ class Downloader:
             self.cdm.close(cdm_session)
         return decryption_key
 
-"""
+
     def download(self, path: Path, stream_url: str):
         if self.download_mode == DownloadMode.YTDLP:
             self.download_ytdlp(path, stream_url)
@@ -348,14 +348,14 @@ class Downloader:
                 "quiet": True,
                 "no_warnings": True,
                 "outtmpl": str(path),
-                "allow_unplayable_formats": True,
+                "allow_unplayable_formats": False,
                 "fixup": "never",
                 "allowed_extractors": ["generic"],
                 "noprogress": self.silent,
             }
         ) as ydl:
             ydl.download(stream_url)
-"""
+
 
     def download_nm3u8dlre(self, path: Path, stream_url: str):
         path.parent.mkdir(parents=True, exist_ok=True)
