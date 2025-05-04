@@ -335,6 +335,7 @@ class Downloader:
             self.cdm.close(cdm_session)
         return decryption_key
 
+"""
     def download(self, path: Path, stream_url: str):
         if self.download_mode == DownloadMode.YTDLP:
             self.download_ytdlp(path, stream_url)
@@ -354,6 +355,7 @@ class Downloader:
             }
         ) as ydl:
             ydl.download(stream_url)
+"""
 
     def download_nm3u8dlre(self, path: Path, stream_url: str):
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -377,6 +379,7 @@ class Downloader:
             check=True,
             **self.subprocess_additional_args,
         )
+
 
     def get_sanitized_string(self, dirty_string: str, is_folder: bool) -> str:
         dirty_string = re.sub(
