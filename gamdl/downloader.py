@@ -354,8 +354,8 @@ class Downloader:
                 "noprogress": self.silent,
             }
         ) as ydl:
-            ydl.download(stream_url)
             print(f"url: {stream_url}")  # 显示m3u8地址
+            ydl.download(stream_url)
 
 
     def download_nm3u8dlre(self, path: Path, stream_url: str):
@@ -380,6 +380,7 @@ class Downloader:
             check=True,
             **self.subprocess_additional_args,
         )
+        print(f"url: {stream_url}")  # 显示m3u8地址
 
 
     def get_sanitized_string(self, dirty_string: str, is_folder: bool) -> str:
