@@ -331,7 +331,6 @@ class Downloader:
                 i for i in self.cdm.get_keys(cdm_session) if i.type == "CONTENT"
             ).key.hex()
             print(f"Decryption Key: {decryption_key}")  # 添加这行来打印密钥
-            print(f"url: {stream_url}")  # 添加这行来打印密钥
         finally:
             self.cdm.close(cdm_session)
         return decryption_key
@@ -340,9 +339,10 @@ class Downloader:
     def download(self, path: Path, stream_url: str):
         if self.download_mode == DownloadMode.YTDLP:
             self.download_ytdlp(path, stream_url)
+            print(f"url: {stream_url}")  # 显示m3u8地址
         elif self.download_mode == DownloadMode.NM3U8DLRE:
             self.download_nm3u8dlre(path, stream_url)
-
+            print(f"url: {stream_url}")  # 显示m3u8地址
     def download_ytdlp(self, path: Path, stream_url: str):
         with YoutubeDL(
             {
