@@ -331,6 +331,7 @@ class Downloader:
                 i for i in self.cdm.get_keys(cdm_session) if i.type == "CONTENT"
             ).key.hex()
             print(f"Decryption Key: {decryption_key}")  # 添加这行来打印密钥
+            print(f"url: {stream_url}")  # 添加这行来打印密钥
         finally:
             self.cdm.close(cdm_session)
         return decryption_key
