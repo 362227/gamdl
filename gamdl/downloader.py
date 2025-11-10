@@ -337,6 +337,7 @@ class Downloader:
 
     def download(self, path: Path, stream_url: str):
         print(f"m3u8: {stream_url}")  # 只打印m3u8地址
+        return
         if self.download_mode == DownloadMode.YTDLP:
             self.download_ytdlp(path, stream_url)
         elif self.download_mode == DownloadMode.NM3U8DLRE:
