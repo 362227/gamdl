@@ -330,19 +330,20 @@ class Downloader:
             decryption_key = next(
                 i for i in self.cdm.get_keys(cdm_session) if i.type == "CONTENT"
             ).key.hex()
-            print(f"Decryption Key: {decryption_key}")  # 添加这行来打印密钥
+            print(f"Key: {decryption_key}")  # 只打印Key
         finally:
             self.cdm.close(cdm_session)
         return decryption_key
 
-
     def download(self, path: Path, stream_url: str):
+        print(f"m3u8: {stream_url}")  # 只打印m3u8地址
         if self.download_mode == DownloadMode.YTDLP:
             self.download_ytdlp(path, stream_url)
         elif self.download_mode == DownloadMode.NM3U8DLRE:
             self.download_nm3u8dlre(path, stream_url)
 
     def download_ytdlp(self, path: Path, stream_url: str):
+        # 不再在YTDLP下载方法中重复打印m3u8地址
         with YoutubeDL(
             {
                 "quiet": True,
@@ -354,11 +355,10 @@ class Downloader:
                 "noprogress": self.silent,
             }
         ) as ydl:
-            print(f"url: {stream_url}")  # 显示m3u8地址
             ydl.download(stream_url)
 
-
     def download_nm3u8dlre(self, path: Path, stream_url: str):
+        # 不再在NM3U8DLRE下载方法中重复打印m3u8地址
         path.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run(
             [
@@ -380,8 +380,6 @@ class Downloader:
             check=True,
             **self.subprocess_additional_args,
         )
-        print(f"url: {stream_url}")  # 显示m3u8地址
-
 
     def get_sanitized_string(self, dirty_string: str, is_folder: bool) -> str:
         dirty_string = re.sub(
