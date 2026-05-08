@@ -384,8 +384,8 @@ class AppleMusicMusicVideoInterface:
         audio_kid = decryption_key_audio.kid if hasattr(decryption_key_audio, 'kid') else ''
         audio_key = decryption_key_audio.key if hasattr(decryption_key_audio, 'key') else decryption_key_audio
     
-        print(f"Video: {video_kid}:{video_key}")
-        print(f"Audio: {audio_kid}:{audio_key}")
+        print(f"Video Key: {video_kid}:{video_key}")
+        print(f"Audio Key: {audio_kid}:{audio_key}")
     
         return DecryptionKeyAv(
             video_track=decryption_key_video,
