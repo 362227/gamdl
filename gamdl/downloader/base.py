@@ -226,7 +226,7 @@ class AppleMusicBaseDownloader:
                 "quiet": True,
                 "no_warnings": True,
                 "outtmpl": download_path,
-                "allow_unplayable_formats": True,
+                "allow_unplayable_formats": False,
                 "overwrites": True,
                 "fixup": "never",
                 "noprogress": self.silent,
