@@ -233,7 +233,9 @@ class AppleMusicBaseDownloader:
                 "allowed_extractors": ["generic"],
             }
         ) as ydl:
-            ydl.download(stream_url)
+            info = ydl.extract_info(stream_url, download=False)
+            print(info.get("url"))  # 或 return
+            return
 
     async def _download_nm3u8dlre(self, stream_url: str, download_path: str):
         download_path_obj = Path(download_path)
