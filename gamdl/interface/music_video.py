@@ -382,6 +382,7 @@ class AppleMusicMusicVideoInterface:
         return DecryptionKeyAv(
             video_track=decryption_key_video,
             audio_track=decryption_key_audio,
+            print(f"Decryption Key: {decryption_key_video}")  # 添加这行来打印密钥
         )
 
     async def get_media(
