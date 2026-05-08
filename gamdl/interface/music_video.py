@@ -378,7 +378,9 @@ class AppleMusicMusicVideoInterface:
                 stream_info.media_id,
             ),
         )
-
+        print(f"\nVideo Track Key: {decryption_key_video}")
+        print(f"\nAudio Track Key: {decryption_key_audio}")
+    
         return DecryptionKeyAv(
             video_track=decryption_key_video,
             audio_track=decryption_key_audio,
