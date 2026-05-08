@@ -378,8 +378,14 @@ class AppleMusicMusicVideoInterface:
                 stream_info.media_id,
             ),
         )
-        print(f"\nVideo Track Key: {decryption_key_video}")
-        print(f"\nAudio Track Key: {decryption_key_audio}")
+        
+        video_kid = decryption_key_video.kid if hasattr(decryption_key_video, 'kid') else ''
+        video_key = decryption_key_video.key if hasattr(decryption_key_video, 'key') else decryption_key_video
+        audio_kid = decryption_key_audio.kid if hasattr(decryption_key_audio, 'kid') else ''
+        audio_key = decryption_key_audio.key if hasattr(decryption_key_audio, 'key') else decryption_key_audio
+    
+        print(f"Video: {video_kid}:{video_key}")
+        print(f"Audio: {audio_kid}:{audio_key}")
     
         return DecryptionKeyAv(
             video_track=decryption_key_video,
