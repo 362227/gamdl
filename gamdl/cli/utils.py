@@ -49,7 +49,7 @@ class CustomOutputWriter:
         self.streams = streams
 
     def add_file(self, path: str):
-        file_stream = open(path, "a")
+        file_stream = open(path, "a", encoding="utf-8")
         atexit.register(file_stream.close)
         self.streams.append(file_stream)
 
