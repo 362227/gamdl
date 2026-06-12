@@ -112,6 +112,10 @@ class AppleMusicApi:
 
         token_match = re.search('(?=eyJh)(.*?)(?=")', index_js_page)
         if not token_match:
+
+            print(f"Failed to find token in JS file: {js_url}")
+            print(f"JS file content length: {len(index_js_page)}")
+            print(f"First 500 characters of JS file:\n{index_js_page[:500]}")
             raise GamdlApiResponseError("Error finding token in index.js page...")
         token = token_match.group(1)
 
