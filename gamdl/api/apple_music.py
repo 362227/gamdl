@@ -87,7 +87,7 @@ class AppleMusicApi:
 
         index_js_uri_match = re.search(
             #r"/(assets/index-legacy[~-][^/\"]+\.js)",
-            r"/data\-src\=\"\/(assets\/.+?\.js)",
+            r'data-src="/(assets/[^"]+\.js)"', 
             home_page,
         )
         if not index_js_uri_match:
