@@ -110,7 +110,7 @@ class AppleMusicApi:
                     status_code=response.status_code if response is not None else None,
                 )
 
-        token_match = re.search('(?=eyJh)(.*?)(?=")', index_js_page)
+        token_match = re.search( r'(?:dGe|nT)="([^"]+)"', index_js_page)
         if not token_match:
             js_url = f"{APPLE_MUSIC_HOMEPAGE_URL}/{index_js_uri}"
             print(f"Failed to find token in JS file: {js_url}")
