@@ -112,7 +112,7 @@ class AppleMusicApi:
 
         token_match = re.search('(?=eyJh)(.*?)(?=")', index_js_page)
         if not token_match:
-            raise GamdlApiResponseError("Error finding token in index.js page")
+            raise GamdlApiResponseError("Error finding token in index.js page...")
         token = token_match.group(1)
 
         log.debug("success")
