@@ -176,33 +176,3 @@ class WrapperApi:
         log.debug("success", playback=playback)
 
         return playback
-
-    async def get_word_lyrics(
-        self,
-        media_id: str,
-        language: str = "en",
-        storefront: str = "us",
-    ) -> dict:
-        log = logger.bind(action="wrapper_get_word_lyrics", media_id=media_id)
-        response = None
-        try:
-            response = await self.client.get(
-                f"{self.base_url}/lyrics",
-                params={
-                    "adamId": media_id,
-                    "language": language,
-                    "script": "en-Latn",
-                    "storefront": storefront,
-                    "syllable": "1",
-                },
-            )
-            response.raise_for_status()
-            lyrics = response.json()
-        except httpx.HTTPError:
-            raise GamdlApiResponseError(
-                "Error fetching word-timed lyrics through wrapper",
-                content=getattr(response, "text", None),
-                status_code=getattr(response, "status_code", None),
-            )
-        log.debug("success")
-        return lyrics

@@ -32,7 +32,7 @@ class AppleMusicSongInterface:
     def __init__(
         self,
         base: AppleMusicBaseInterface,
-        synced_lyrics_format: SyncedLyricsFormat = SyncedLyricsFormat.TTML,
+        synced_lyrics_format: SyncedLyricsFormat = SyncedLyricsFormat.LRC,
         codec_priority: list[SongCodec] = [SongCodec.AAC_WEB],
         use_album_date: bool = False,
         skip_stream_info: bool = False,
@@ -61,23 +61,6 @@ class AppleMusicSongInterface:
         if not song_metadata["attributes"]["hasLyrics"]:
             log.debug("no_lyrics")
             return None
-
-        if self.base.wrapper_api:
-            word_lyrics = await self.base.wrapper_api.get_word_lyrics(
-                song_metadata["id"],
-                self.base.itunes_api.language,
-                self.base.itunes_api.storefront,
-            )
-            ttml = (
-                word_lyrics.get("data", [{}])[0]
-                .get("attributes", {})
-                .get("ttmlLocalizations")
-            )
-            if ttml:
-                lyrics = self._get_lyrics(ttml)
-                log.debug("success", lyrics=lyrics)
-                return lyrics
-
         if (
             "relationships" not in song_metadata
             or "lyrics" not in song_metadata["relationships"]

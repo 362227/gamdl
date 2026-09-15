@@ -57,6 +57,24 @@ go build -o "$HOME/.local/bin/gamdl-playready" .
 GAMDL continues to own all progress output, prompts, muxing, and tagging. Set
 `GAMDL_PLAYREADY_HELPER` only if the helper is installed somewhere else.
 
+### Building this fork
+
+This fork is on the `integrate-playready-lite` branch. Build the helper and
+install the Python/Rust package from that branch with:
+
+```bash
+git clone -b integrate-playready-lite https://github.com/worstgirlinamerica/gamdl.git
+cd gamdl
+cd tools/playready-helper
+go mod tidy
+go build -o "$HOME/.local/bin/gamdl-playready" .
+cd ../..
+python -m pip install .
+```
+
+The wrapper-v2 service must be running separately; its fork-specific build
+instructions are in the wrapper repository README.
+
 #### N_m3u8DL-RE
 
 Use [N_m3u8DL-RE](https://github.com/nilaoda/N_m3u8DL-RE/releases/latest) as a faster download alternative to the default yt-dlp download mode. Enable it with `--download-mode nm3u8dlre` or `download_mode = nm3u8dlre`.
