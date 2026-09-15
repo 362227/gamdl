@@ -164,8 +164,15 @@ class WrapperApi:
                 f"{self.base_url}/playback",
                 params={"adam_id": media_id},
             )
-            response.raise_for_status()
-            playback = response.json()
+            if response.is_success:
+                playback = response.json()
+            else:
+                fallback = await self.client.get(
+                    f"{self.base_url}/webplayback",
+                    params={"adam_id": media_id},
+                )
+                fallback.raise_for_status()
+                playback = fallback.json()
         except httpx.HTTPError:
             raise GamdlApiResponseError(
                 "Error fetching wrapper playback",
