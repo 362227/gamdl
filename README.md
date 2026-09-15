@@ -1,13 +1,8 @@
-# Gamdl (Glomatico's Apple Music Downloader)
+# gamdl — PlayReady fork
 
-[![PyPI version](https://img.shields.io/pypi/v/gamdl?color=blue)](https://pypi.org/project/gamdl/)
-[![Python versions](https://img.shields.io/pypi/pyversions/gamdl)](https://pypi.org/project/gamdl/)
-[![License](https://img.shields.io/github/license/glomatico/gamdl)](https://github.com/glomatico/gamdl/blob/main/LICENSE)
-[![Downloads](https://img.shields.io/pypi/dm/gamdl)](https://pypi.org/project/gamdl/)
+Fork of [glomatico/gamdl](https://github.com/glomatico/gamdl) with a PlayReady music-video decryption path and webplayback fallback for songs. Requires the companion [wrapper-v2 fork](https://github.com/worstgirlinamerica/wrapper-v2/tree/integrate-playready-lite).
 
 A command-line app for downloading Apple Music songs, music videos and post videos.
-
-**Join our Discord Server:** <https://discord.gg/aBjMEZ9tnq>
 
 ## ✨ Features
 
@@ -32,7 +27,9 @@ A command-line app for downloading Apple Music songs, music videos and post vide
 
 #### Wrapper
 
-Run the [Wrapper v2](https://github.com/glomatico/wrapper-v2) server for wrapper-backed account, playback, and decryption requests. Enable it with `--use-wrapper` or `use_wrapper = true`. Configure wrapper HTTP account/playback calls with `--wrapper-url` or `wrapper_url`, and configure WV2D batch TCP decrypt with `--wrapper-decrypt-host` / `--wrapper-decrypt-port`.
+Run the [wrapper-v2 fork](https://github.com/worstgirlinamerica/wrapper-v2/tree/integrate-playready-lite) — it exposes the HTTP JSON account/playback API and the WV2D batch TCP port (`10020`) for FairPlay decrypt, plus the `/webplayback` and `/license` endpoints this fork uses for PlayReady.
+
+Enable with `--use-wrapper` or `use_wrapper = true`. Configure the HTTP base with `--wrapper-url` and the TCP decrypt address with `--wrapper-decrypt-host` / `--wrapper-decrypt-port`.
 
 gamdl builds a private Rust extension from `gamdl/downloader/ammuxer` as `gamdl._ammuxer`. That native media engine handles wrapper TCP decrypt/reassembly plus MP4/M4A writing and muxing; Python remains responsible for the CLI, downloads, metadata tagging, and high-level orchestration.
 
@@ -41,12 +38,10 @@ The wrapper is recommended when using the `alac` song codec. ALAC can be attempt
 **Note:**
 
 - When using the Wrapper, you'll be asked to insert your credentials to login if you haven't already.
-- Newer wrapper-v2 builds use HTTP JSON for account/playback and WV2D batch TCP port `10020` for decrypt.
 - Song codecs other than `alac` do not require the wrapper.
 - Cookies can be skipped when using the wrapper.
 
-For the combined wrapper PlayReady music-video path, build the one-shot helper
-from the included source (it exits after returning one content key):
+Music video downloads use PlayReady when a PlayReady PSSH is present in the stream (preferred over Widevine). This requires the `gamdl-playready` Go helper — build it once:
 
 ```bash
 cd tools/playready-helper
@@ -54,26 +49,9 @@ go mod tidy
 go build -o "$HOME/.local/bin/gamdl-playready" .
 ```
 
-GAMDL continues to own all progress output, prompts, muxing, and tagging. Set
-`GAMDL_PLAYREADY_HELPER` only if the helper is installed somewhere else.
+If the helper is installed somewhere other than `$HOME/.local/bin`, set `GAMDL_PLAYREADY_HELPER` to its path.
 
-### Building this fork
-
-This fork is on the `integrate-playready-lite` branch. Build the helper and
-install the Python/Rust package from that branch with:
-
-```bash
-git clone -b integrate-playready-lite https://github.com/worstgirlinamerica/gamdl.git
-cd gamdl
-cd tools/playready-helper
-go mod tidy
-go build -o "$HOME/.local/bin/gamdl-playready" .
-cd ../..
-python -m pip install .
-```
-
-The wrapper-v2 service must be running separately; its fork-specific build
-instructions are in the wrapper repository README.
+Song downloads fall back to the `/webplayback` endpoint automatically when the primary playback path fails.
 
 #### N_m3u8DL-RE
 
@@ -85,17 +63,30 @@ N_m3u8DL-RE also needs FFmpeg. If the FFmpeg executable is not available in your
 
 ## 📦 Installation
 
-1. **Install Gamdl via pip:**
+1. **Clone and install this fork:**
 
    ```bash
-   pip install gamdl
+   git clone -b integrate-playready-lite https://github.com/worstgirlinamerica/gamdl.git
+   cd gamdl
+   pip install .
    ```
 
-2. **Set up the cookies file:**
+2. **Build the PlayReady helper** (required for music video downloads with wrapper):
+
+   ```bash
+   cd tools/playready-helper
+   go mod tidy
+   go build -o "$HOME/.local/bin/gamdl-playready" .
+   cd ../..
+   ```
+
+3. **Set up the cookies file:**
    - Place the cookies file in the working directory as `cookies.txt`, or
    - Specify the path using `--cookies-path` or in the config file
 
-3. **Optional: Set up dependencies** (only if you need the functionality)
+4. **Set up the wrapper** — see the [wrapper-v2 fork README](https://github.com/worstgirlinamerica/wrapper-v2/tree/integrate-playready-lite) for build instructions.
+
+5. **Optional: Set up dependencies** (only if you need the functionality)
    See the [Optional Dependencies](#optional-dependencies) section to determine which optional tools you need.
 
 ## 🚀 Usage
@@ -410,6 +401,4 @@ if __name__ == "__main__":
 
 MIT License - see [LICENSE](LICENSE) file for details
 
-## 🤝 Contributing
 
-Currently, I'm not interested in reviewing pull requests that change or add features. Only critical bug fixes will be considered. However, feel free to open issues for bugs or feature requests.
