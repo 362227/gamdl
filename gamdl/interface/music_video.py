@@ -493,9 +493,18 @@ class AppleMusicMusicVideoInterface:
 
         if self.base.wrapper_api:
             playback = await self.base.wrapper_api.get_playback(media.media_id)
-            media.tags = await self.base.get_tags_from_asset_info(
-                playback["songList"][0]["assets"][0]["metadata"],
-            )
+            assets = playback.get("songList", [{}])[0].get("assets", [])
+            if assets and assets[0].get("metadata"):
+                media.tags = await self.base.get_tags_from_asset_info(
+                    assets[0]["metadata"],
+                )
+            else:
+                # wrapper-v2's music-video playback response may expose only
+                # hls-playlist-url and intentionally omit download assets.
+                media.tags = await self.get_tags(
+                    media.media_metadata,
+                    itunes_page_metadata,
+                )
         else:
             playback = None
             media.tags = await self.get_tags(
