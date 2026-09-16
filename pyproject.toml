@@ -3,9 +3,9 @@ requires = ["maturin>=1.8,<2"]
 build-backend = "maturin"
 
 [project]
-name = "gamdl"
+name = "gamdl-pr"
 version = "3.8.5"
-description = "A command-line app for downloading Apple Music songs, music videos and post videos."
+description = "Fork of glomatico/gamdl with PlayReady music-video decryption and webplayback fallback. Requires wrappr (worstgirlinamerica/wrappr)."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
@@ -26,7 +26,8 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/glomatico/gamdl"
+Repository = "https://github.com/worstgirlinamerica/gamdl"
+Upstream = "https://github.com/glomatico/gamdl"
 
 [project.scripts]
 gamdl = "gamdl.cli.cli:main"

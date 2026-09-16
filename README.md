@@ -1,404 +1,293 @@
-# gamdl — PlayReady fork
+# gamdl-pr
 
-Fork of [glomatico/gamdl](https://github.com/glomatico/gamdl) with a PlayReady music-video decryption path and webplayback fallback for songs. Requires the companion [wrapper-v2 fork](https://github.com/worstgirlinamerica/wrapper-v2/tree/integrate-playready-lite).
+Fork of [glomatico/gamdl](https://github.com/glomatico/gamdl) that adds a PlayReady decryption path for music videos and a `/webplayback` fallback for songs. Works alongside [worstgirlinamerica/wrappr](https://github.com/worstgirlinamerica/wrappr/tree/playready) — the companion daemon that handles Apple authentication and decryption.
 
-A command-line app for downloading Apple Music songs, music videos and post videos.
+> **Coming from glomatico/gamdl?** The CLI command is still `gamdl` and all the same flags work. The difference is this fork requires two extra pieces at install time: a Rust build step (handled automatically by pip) and a small Go binary for PlayReady. See [Installation](#installation) below.
 
-## ✨ Features
+---
 
-- 🎵 **High-Quality Songs** - Download songs in AAC 256kbps and other codecs
-- 🎬 **High-Quality Music Videos** - Download music videos in resolutions up to 4K
-- 📝 **Synced Lyrics** - Download synced lyrics in LRC, SRT, or TTML formats
-- 🏷️ **Rich Metadata** - Automatic tagging with comprehensive metadata
-- 🎤 **Artist Support** - Download all albums or music videos from an artist
-- ⚙️ **Highly Customizable** - Extensive configuration options for advanced users
+## What's different from upstream
 
-## 📋 Prerequisites
+| | glomatico/gamdl | gamdl-pr (this fork) |
+|-|-----------------|----------------------|
+| Songs | ✅ | ✅ |
+| Music videos (Widevine) | ✅ | ✅ |
+| Music videos (PlayReady) | ❌ | ✅ |
+| Song webplayback fallback | ❌ | ✅ |
+| Requires wrappr | optional | required for PlayReady/ALAC |
+| Extra install step | none | Go binary (`gamdl-playready`) |
 
-### Required
+---
 
-- **Python 3.10 or higher**
-- **Active Apple Music subscription**
-- **Apple Music Cookies** - export your browser cookies in Netscape format while logged in at [Apple Music](https://music.apple.com):
-  - **Firefox**: [Export Cookies](https://addons.mozilla.org/addon/export-cookies-txt)
-  - **Chromium**: [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)
+## Prerequisites
 
-### Optional Dependencies
+You need all three of these before installing:
 
-#### Wrapper
+### 1. Python 3.10+
 
-Run the [wrapper-v2 fork](https://github.com/worstgirlinamerica/wrapper-v2/tree/integrate-playready-lite) — it exposes the HTTP JSON account/playback API and the WV2D batch TCP port (`10020`) for FairPlay decrypt, plus the `/webplayback` and `/license` endpoints this fork uses for PlayReady.
+Check with `python3 --version`. If you need to install it:
+- **macOS:** `brew install python` or download from [python.org](https://www.python.org/downloads/)
+- **Linux:** `sudo apt install python3 python3-pip` (Debian/Ubuntu) or your distro's equivalent
+- **Windows:** Download from [python.org](https://www.python.org/downloads/) — check "Add to PATH" during install
 
-Enable with `--use-wrapper` or `use_wrapper = true`. Configure the HTTP base with `--wrapper-url` and the TCP decrypt address with `--wrapper-decrypt-host` / `--wrapper-decrypt-port`.
+### 2. Go 1.21+
 
-gamdl builds a private Rust extension from `gamdl/downloader/ammuxer` as `gamdl._ammuxer`. That native media engine handles wrapper TCP decrypt/reassembly plus MP4/M4A writing and muxing; Python remains responsible for the CLI, downloads, metadata tagging, and high-level orchestration.
+Required to build the `gamdl-playready` helper binary. Check with `go version`. If you need to install it:
+- **macOS:** `brew install go`
+- **Linux:** `sudo apt install golang-go` or follow [go.dev/doc/install](https://go.dev/doc/install) for the latest version
+- **Windows:** Download the installer from [go.dev/dl](https://go.dev/dl/)
 
-The wrapper is recommended when using the `alac` song codec. ALAC can be attempted without wrapper, but it probably won't work due to API limitations.
+### 3. Rust (via rustup) + a C compiler
 
-**Note:**
+Required because pip builds a native Rust extension (`gamdl._ammuxer`) during install. This happens automatically — you just need Rust present.
+- **All platforms:** `curl -sSf https://sh.rustup.rs | sh` then restart your terminal
+- **Windows:** Download rustup from [rustup.rs](https://rustup.rs/) — also requires [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
 
-- When using the Wrapper, you'll be asked to insert your credentials to login if you haven't already.
-- Song codecs other than `alac` do not require the wrapper.
-- Cookies can be skipped when using the wrapper.
+### 4. Apple Music subscription + cookies
 
-Music video downloads use PlayReady when a PlayReady PSSH is present in the stream (preferred over Widevine). This requires the `gamdl-playready` Go helper — build it once:
+Export your browser cookies in Netscape format while logged into [music.apple.com](https://music.apple.com):
+- **Firefox:** [Export Cookies](https://addons.mozilla.org/addon/export-cookies-txt)
+- **Chromium/Chrome:** [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)
+
+### 5. wrappr (for PlayReady and ALAC)
+
+The companion daemon — handles Apple account auth, playback dispatch, and the `/license` endpoint this fork uses for PlayReady. See [worstgirlinamerica/wrappr](https://github.com/worstgirlinamerica/wrappr/tree/playready) for setup. Once it's running, `curl http://127.0.0.1/health` should return `"status":"ok"`.
+
+---
+
+## Installation
+
+### Step 1 — Clone and install the Python package
+
+```bash
+git clone -b playready https://github.com/worstgirlinamerica/gamdl.git
+cd gamdl
+pip install .
+```
+
+This will compile the native Rust extension. It takes a minute or two. If it fails, the most common cause is a missing C compiler — see [Troubleshooting](#troubleshooting).
+
+### Step 2 — Build the PlayReady helper
+
+This is a small Go binary that handles the PlayReady CDM challenge/license exchange. It needs to be built once and placed somewhere on your PATH.
 
 ```bash
 cd tools/playready-helper
 go mod tidy
 go build -o "$HOME/.local/bin/gamdl-playready" .
+cd ../..
 ```
 
-If the helper is installed somewhere other than `$HOME/.local/bin`, set `GAMDL_PLAYREADY_HELPER` to its path.
+Make sure `$HOME/.local/bin` is on your PATH. On macOS/Linux, add this to your `~/.zshrc` or `~/.bashrc` if it isn't already:
 
-Song downloads fall back to the `/webplayback` endpoint automatically when the primary playback path fails.
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+```
 
-#### N_m3u8DL-RE
+On **Windows**, build to a folder that's on your PATH:
 
-Use [N_m3u8DL-RE](https://github.com/nilaoda/N_m3u8DL-RE/releases/latest) as a faster download alternative to the default yt-dlp download mode. Enable it with `--download-mode nm3u8dlre` or `download_mode = nm3u8dlre`.
+```powershell
+go build -o "$env:USERPROFILE\AppData\Local\Microsoft\WindowsApps\gamdl-playready.exe" .
+```
 
-If the executable is not available in your system PATH, set its location with `--nm3u8dlre-path` or `nm3u8dlre_path`.
+Or build it anywhere and set the env variable (see [Configuration](#configuration)):
 
-N_m3u8DL-RE also needs FFmpeg. If the FFmpeg executable is not available in your system PATH, set its location with `--ffmpeg-path` or `ffmpeg_path`.
+```bash
+GAMDL_PLAYREADY_HELPER=/path/to/gamdl-playready gamdl ...
+```
 
-## 📦 Installation
+### Step 3 — Place your cookies file
 
-1. **Clone and install this fork:**
+Put your `cookies.txt` in the directory you'll run `gamdl` from, or pass the path explicitly:
 
-   ```bash
-   git clone -b integrate-playready-lite https://github.com/worstgirlinamerica/gamdl.git
-   cd gamdl
-   pip install .
-   ```
+```bash
+gamdl --cookies-path /path/to/cookies.txt "https://music.apple.com/..."
+```
 
-2. **Build the PlayReady helper** (required for music video downloads with wrapper):
+### Step 4 — Start wrappr
 
-   ```bash
-   cd tools/playready-helper
-   go mod tidy
-   go build -o "$HOME/.local/bin/gamdl-playready" .
-   cd ../..
-   ```
+Follow the [wrappr setup guide](https://github.com/worstgirlinamerica/wrappr/tree/playready). Once it's running:
 
-3. **Set up the cookies file:**
-   - Place the cookies file in the working directory as `cookies.txt`, or
-   - Specify the path using `--cookies-path` or in the config file
+```bash
+curl http://127.0.0.1/health
+# should return: {"status":"ok","runtime":{"playback_ready":true},...}
+```
 
-4. **Set up the wrapper** — see the [wrapper-v2 fork README](https://github.com/worstgirlinamerica/wrapper-v2/tree/integrate-playready-lite) for build instructions.
+---
 
-5. **Optional: Set up dependencies** (only if you need the functionality)
-   See the [Optional Dependencies](#optional-dependencies) section to determine which optional tools you need.
-
-## 🚀 Usage
+## Usage
 
 ```bash
 gamdl [OPTIONS] URLS...
 ```
 
-### Supported URL Types
-
-- Songs (Catalog/Library)
-- Albums (Catalog/Library)
-- Playlists (Catalog/Library)
-- Music Videos (Catalog/Library)
-- Artists
-- Post Videos
-- Apple Music Classical
-
-### Examples
-
-**Download a song:**
+### Basic examples
 
 ```bash
-gamdl "https://music.apple.com/us/album/never-gonna-give-you-up-2022-remaster/1624945511?i=1624945512"
+# Download a song
+gamdl "https://music.apple.com/us/album/song-name/1234567890?i=1234567891"
+
+# Download an album
+gamdl "https://music.apple.com/us/album/album-name/1234567890"
+
+# Download a music video with PlayReady (requires wrappr running)
+gamdl --use-wrapper "https://music.apple.com/us/music-video/title/1234567890"
+
+# Download ALAC (lossless), requires wrappr
+gamdl --use-wrapper --song-codec-priority alac "https://music.apple.com/..."
 ```
 
-**Download an album:**
+### Supported URL types
+
+Songs, albums, playlists, music videos, artists, post videos — catalog and library. Apple Music Classical included.
+
+### Interactive prompt controls
+
+| Key | Action |
+|-----|--------|
+| Arrow keys | Move selection |
+| Space | Toggle selection |
+| Ctrl + A | Select all |
+| Enter | Confirm |
+
+---
+
+## Configuration
+
+Config file is created automatically on first run:
+- **macOS / Linux:** `~/.gamdl/config.ini`
+- **Windows:** `%USERPROFILE%\.gamdl\config.ini`
+
+Command-line arguments override config values.
+
+### Key options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--cookies-path`, `-c` | Cookies file path | `./cookies.txt` |
+| `--use-wrapper` | Enable wrappr for account, playback, and decrypt | `false` |
+| `--wrapper-url` | wrappr HTTP base URL | `http://127.0.0.1` |
+| `--wrapper-decrypt-host` | wrappr TCP decrypt host | `127.0.0.1` |
+| `--wrapper-decrypt-port` | wrappr TCP decrypt port | `10020` |
+| `--song-codec-priority` | Comma-separated codec priority | `aac-web` |
+| `--music-video-resolution` | Max music video resolution | `1080p` |
+| `--output-path`, `-o` | Output directory | `./Apple Music` |
+| `--download-mode` | `ytdlp` or `nm3u8dlre` | `ytdlp` |
+| `--log-level` | `DEBUG`, `INFO`, `WARNING`, `ERROR` | `INFO` |
+
+Full option reference is in the [upstream gamdl docs](https://github.com/glomatico/gamdl#readme) — all flags are the same.
+
+### Song codecs
+
+**Web (no wrapper needed):**
+- `aac-web` — AAC 256kbps 44.1kHz
+- `aac-he-web` — AAC-HE 64kbps
+
+**Non-web (wrapper recommended):**
+- `alac` — Lossless up to 24-bit/192kHz
+- `atmos` — Dolby Atmos 768kbps
+- `aac`, `aac-he`, `ac3`, and spatial variants
+
+### Music video codecs / resolutions
+
+- H.264: up to 1080p
+- H.265: up to 2160p (4K)
+- Remux format: `m4v` (default) or `mp4`
+
+---
+
+## Troubleshooting
+
+### `pip install .` fails with a compiler error
+
+The install compiles a Rust extension. Make sure:
+1. Rust is installed: `rustup --version`
+2. You have a C compiler:
+   - macOS: `xcode-select --install`
+   - Linux: `sudo apt install build-essential`
+   - Windows: Install [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+
+Then retry `pip install .`
+
+### `gamdl-playready: command not found`
+
+The helper binary isn't on your PATH. Either:
+- Move it to a directory that's on your PATH (`$HOME/.local/bin`, `/usr/local/bin`, etc.)
+- Or set the env variable when running gamdl: `GAMDL_PLAYREADY_HELPER=/full/path/to/gamdl-playready gamdl ...`
+
+### `go: command not found` during helper build
+
+Go isn't installed. See [Prerequisites → Go](#2-go-121).
+
+### `wrapper_api is required for PlayReady decrypt`
+
+You ran a music video download without `--use-wrapper`, or wrappr isn't running. Start wrappr first and pass `--use-wrapper`.
+
+### `PlayReady helper returned an invalid content key`
+
+The helper ran but got a bad response from wrappr's `/license` endpoint. Check:
+1. `curl http://127.0.0.1/health` — is wrappr running and `playback_ready: true`?
+2. Is your Apple session still valid? Try `curl http://127.0.0.1/me` — if `state` isn't `"authenticated"`, log in again via wrappr.
+
+### `Wrapper is not authenticated`
+
+wrappr is running but hasn't been logged into. Either pass credentials via `--wrapper-url` pointed at a logged-in instance, or log in manually:
 
 ```bash
-gamdl "https://music.apple.com/us/album/whenever-you-need-somebody-2022-remaster/1624945511"
+curl -X POST http://127.0.0.1/login \
+     -H 'content-type: application/json' \
+     -d '{"username":"you@example.com","password":"your-app-specific-password"}'
 ```
 
-**Download from an artist:**
+### Songs download fine but music videos fail
 
-```bash
-gamdl "https://music.apple.com/us/artist/rick-astley/669771"
-```
+Music video PlayReady decrypt requires both `--use-wrapper` and the `gamdl-playready` binary. Songs (non-ALAC) use Widevine and work without either.
 
-**Interactive Prompt Controls:**
+---
 
-| Key            | Action            |
-| -------------- | ----------------- |
-| **Arrow keys** | Move selection    |
-| **Space**      | Toggle selection  |
-| **Ctrl + A**   | Select all        |
-| **Enter**      | Confirm selection |
-
-## ⚙️ Configuration
-
-Configure Gamdl using command-line arguments or a config file.
-
-**Config file location:**
-
-- Linux: `~/.gamdl/config.ini`
-- Windows: `%USERPROFILE%\.gamdl\config.ini`
-
-The file is created automatically on first run. Command-line arguments override config values.
-
-### Configuration Options
-
-| Option                          | Description                                                       | Default                       |
-| ------------------------------- | ----------------------------------------------------------------- | ----------------------------- |
-| **General Options**             |                                                                   |                               |
-| `--read-urls-as-txt`, `-r`      | Read URLs from text files                                         | `false`                       |
-| `--config-path`                 | Config file path                                                  | `<home>/.gamdl/config.ini`    |
-| `--log-level`                   | Logging level                                                     | `INFO`                        |
-| `--log-file`                    | Log file path                                                     | -                             |
-| `--no-exceptions`               | Don't print exceptions                                            | `false`                       |
-| `--artist-auto-select`          | Automatically select artist content to download (artist URLs)     | -                             |
-| `--database-path`               | Path to the SQLite database file for registering downloaded media | -                             |
-| `--no-config-file`, `-n`        | Don't use a config file                                           | `false`                       |
-| **Apple Music Options**         |                                                                   |                               |
-| `--cookies-path`, `-c`          | Cookies file path                                                 | `./cookies.txt`               |
-| `--wrapper-url`                 | Wrapper HTTP control base URL                                     | `http://127.0.0.1`            |
-| `--wrapper-decrypt-host`        | Wrapper TCP decrypt host                                          | `127.0.0.1`                   |
-| `--wrapper-decrypt-port`        | Wrapper TCP decrypt port                                          | `10020`                       |
-| `--language`, `-l`              | Metadata language                                                 | `en-US`                       |
-| **Interface Options**           |                                                                   |                               |
-| `--cover-format`                | Cover format                                                      | `jpg`                         |
-| `--cover-size`                  | Cover size in pixels                                              | `1200`                        |
-| `--wvd-path`                    | .wvd file path                                                    | -                             |
-| `--use-wrapper`                 | Use wrapper for account, playback, and decryption requests        | `false`                       |
-| **Song Options**                |                                                                   |                               |
-| `--synced-lyrics-format`        | Synced lyrics format                                              | `lrc`                         |
-| `--song-codec-priority`         | Comma-separated codec priority                                    | `aac-web`                     |
-| `--use-album-date`              | Use album release date for songs                                  | `false`                       |
-| `--no-synced-lyrics`            | Don't download synced lyrics                                      | `false`                       |
-| `--synced-lyrics-only`          | Download only synced lyrics                                       | `false`                       |
-| **Music Video Options**         |                                                                   |                               |
-| `--music-video-resolution`      | Max music video resolution                                        | `1080p`                       |
-| `--music-video-codec-priority`  | Comma-separated codec priority                                    | `h264,h265`                   |
-| `--music-video-remux-format`    | Music video remux format                                          | `m4v`                         |
-| **Post Video Options**          |                                                                   |                               |
-| `--uploaded-video-quality`      | Post video quality                                                | `best`                        |
-| **Download & Path Options**     |                                                                   |                               |
-| `--output-path`, `-o`           | Output directory path                                             | `./Apple Music`               |
-| `--temp-path`                   | Temporary directory path                                          | `.`                           |
-| `--nm3u8dlre-path`              | N_m3u8DL-RE executable path                                       | `N_m3u8DL-RE`                 |
-| `--ffmpeg-path`                 | FFmpeg executable path                                            | `ffmpeg`                      |
-| `--download-mode`               | Download mode                                                     | `ytdlp`                       |
-| **Template Options**            |                                                                   |                               |
-| `--album-folder-template`       | Album folder template                                             | `{album_artist}/{album}`      |
-| `--compilation-folder-template` | Compilation folder template                                       | `Compilations/{album}`        |
-| `--no-album-folder-template`    | No album folder template                                          | `{artist}/Unknown Album`      |
-| `--playlist-folder-template`    | Playlist folder template                                          | `Playlists/{playlist_artist}` |
-| `--single-disc-file-template`   | Single disc file template                                         | `{track:02d} {title}`         |
-| `--multi-disc-file-template`    | Multi disc file template                                          | `{disc}-{track:02d} {title}`  |
-| `--no-album-file-template`      | No album file template                                            | `{title}`                     |
-| `--playlist-file-template`      | Playlist file template                                            | `{playlist_title}`            |
-| `--date-tag-template`           | Date tag template                                                 | `%Y-%m-%dT%H:%M:%SZ`          |
-| `--exclude-tags`                | Comma-separated tags to exclude                                   | -                             |
-| `--truncate`                    | Max filename length                                               | -                             |
-| **File Output Options**         |                                                                   |                               |
-| `--overwrite`                   | Overwrite existing files                                          | `false`                       |
-| `--save-cover`, `-s`            | Save cover as separate file                                       | `false`                       |
-| `--save-playlist`               | Save M3U8 playlist file                                           | `false`                       |
-
-### Template Variables
-
-**Tags for templates and exclude-tags:**
-
-- `album`, `album_artist`, `album_id`
-- `artist`, `artist_id`
-- `composer`, `composer_id`
-- `date` (supports strftime format: `{date:%Y}`)
-- `disc`, `disc_total`
-- `media_type`
-- `playlist_artist`, `playlist_id`, `playlist_title`, `playlist_track`
-- `title`, `title_id`
-- `track`, `track_total`
-
-**Tags for exclude-tags only:**
-
-- `album_sort`, `artist_sort`, `composer_sort`, `title_sort`
-- `comment`, `compilation`, `copyright`, `cover`, `gapless`, `genre`, `genre_id`, `lyrics`, `rating`, `storefront`, `xid`
-- `all` (special: skip all tagging)
-
-### Logging Level
-
-- `DEBUG`, `INFO`, `WARNING`, `ERROR`
-
-### Download Mode
-
-- `ytdlp`, `nm3u8dlre`
-
-> [!NOTE]
->
-> - **yt-dlp is only used as a file download library**. Media is still fetched directly from Apple Music's servers, and yt-dlp is only responsible for handling the file download process.
-
-### Cover Format
-
-- `jpg`
-- `png`
-- `raw` - Raw format as provided by the artist (requires `save_cover` to be enabled as it doesn't embed covers into files)
-
-### Metadata Language
-
-Use ISO 639-1 language codes (e.g., `en-US`, `es-ES`, `ja-JP`, `pt-BR`). Don't always work for music videos.
-
-### Song Codecs
-
-**Web:**
-
-- `aac-web` - AAC 256kbps 44.1kHz
-- `aac-he-web` - AAC-HE 64kbps 44.1kHz
-
-**Non-web** (`alac` can be attempted without wrapper, but it probably won't work due to API limitations):
-
-- `aac` - AAC 256kbps up to 48kHz
-- `aac-he` - AAC-HE 64kbps up to 48kHz
-- `aac-binaural` - AAC 256kbps binaural
-- `aac-downmix` - AAC 256kbps downmix
-- `aac-he-binaural` - AAC-HE 64kbps binaural
-- `aac-he-downmix` - AAC-HE 64kbps downmix
-- `atmos` - Dolby Atmos 768kbps
-- `ac3` - AC3 640kbps
-- `alac` - ALAC up to 24-bit/192kHz
-- `ask` - Interactive codec selection
-
-### Synced Lyrics Format
-
-- `lrc`
-- `srt` - SubRip subtitle format (more accurate timing)
-- `ttml` - Native Apple Music format (not compatible with most media players)
-
-### Music Video Codecs
-
-- `h264`
-- `h265`
-- `ask` - Interactive codec selection
-
-### Music Video Resolutions
-
-- H.264: `240p`, `360p`, `480p`, `540p`, `720p`, `1080p`
-- H.265 only: `1440p`, `2160p`
-
-### Music Video Remux Formats
-
-- `m4v`, `mp4`
-
-### Post Video Quality
-
-- `best` - Up to 1080p with AAC 256kbps
-- `ask` - Interactive quality selection
-
-### Artist Auto-Select Options
-
-- `main-albums`
-- `compilation-albums`
-- `live-albums`
-- `singles-eps`
-- `all-albums`
-- `top-songs`
-- `music-videos`
-
-## 🐍 Embedding
-
-Use Gamdl as a library in your Python projects:
+## Embedding
 
 ```python
 import asyncio
-
 from gamdl.api import AppleMusicApi
-from gamdl.downloader import (
-    AppleMusicBaseDownloader,
-    AppleMusicDownloader,
-    AppleMusicMusicVideoDownloader,
-    AppleMusicSongDownloader,
-    AppleMusicUploadedVideoDownloader,
-)
-from gamdl.interface import (
-    AppleMusicBaseInterface,
-    AppleMusicInterface,
-    AppleMusicMusicVideoInterface,
-    AppleMusicSongInterface,
-    AppleMusicUploadedVideoInterface,
-)
-
+from gamdl.api.wrapper import WrapperApi
+from gamdl.downloader import AppleMusicDownloader, AppleMusicSongDownloader, AppleMusicMusicVideoDownloader, AppleMusicUploadedVideoDownloader, AppleMusicBaseDownloader
+from gamdl.interface import AppleMusicBaseInterface, AppleMusicInterface, AppleMusicSongInterface, AppleMusicMusicVideoInterface, AppleMusicUploadedVideoInterface
 
 async def main():
-    # Create AppleMusicApi instance from cookies
-    apple_music_api = await AppleMusicApi.create_from_netscape_cookies(
-        cookies_path="cookies.txt",
-    )
+    apple_music_api = await AppleMusicApi.create_from_netscape_cookies(cookies_path="cookies.txt")
 
-    # Check subscription
-    if not apple_music_api.active_subscription:
-        print("No active Apple Music subscription")
-        return
+    # Optional: pass wrapper_api for PlayReady / ALAC
+    wrapper_api = await WrapperApi.create(base_url="http://127.0.0.1")
 
-    # Create base interface
     base_interface = await AppleMusicBaseInterface.create(
         apple_music_api=apple_music_api,
+        wrapper_api=wrapper_api,
     )
 
-    # Create specialized interfaces
-    song_interface = AppleMusicSongInterface(
-        base=base_interface,
-    )
-    music_video_interface = AppleMusicMusicVideoInterface(
-        base=base_interface,
-    )
-    uploaded_video_interface = AppleMusicUploadedVideoInterface(
-        base=base_interface,
-    )
-
-    # Create main interface
     interface = AppleMusicInterface(
-        song=song_interface,
-        music_video=music_video_interface,
-        uploaded_video=uploaded_video_interface,
+        song=AppleMusicSongInterface(base=base_interface),
+        music_video=AppleMusicMusicVideoInterface(base=base_interface),
+        uploaded_video=AppleMusicUploadedVideoInterface(base=base_interface),
     )
-
-    # Create base downloader
-    base_downloader = AppleMusicBaseDownloader(
-        interface=interface,
-    )
-
-    # Create specialized downloaders
-    song_downloader = AppleMusicSongDownloader(base=base_downloader)
-    music_video_downloader = AppleMusicMusicVideoDownloader(
-        base=base_downloader,
-    )
-    uploaded_video_downloader = AppleMusicUploadedVideoDownloader(base=base_downloader)
-
-    # Create main downloader
+    base_downloader = AppleMusicBaseDownloader(interface=interface)
     downloader = AppleMusicDownloader(
-        song=song_downloader,
-        music_video=music_video_downloader,
-        uploaded_video=uploaded_video_downloader,
+        song=AppleMusicSongDownloader(base=base_downloader),
+        music_video=AppleMusicMusicVideoDownloader(base=base_downloader),
+        uploaded_video=AppleMusicUploadedVideoDownloader(base=base_downloader),
     )
 
-    # Download from URL
-    url = "https://music.apple.com/us/album/never-gonna-give-you-up-2022-remaster/1624945511?i=1624945512"
-
-    download_queue = []
+    url = "https://music.apple.com/us/album/example/1234567890?i=1234567891"
     async for media in downloader.get_download_item_from_url(url):
-        download_queue.append(media)
+        await downloader.download(media)
 
-    for download_item in download_queue:
-        try:
-            await downloader.download(download_item)
-        except Exception as e:
-            print(f"Error downloading: {e}")
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+asyncio.run(main())
 ```
 
-## 📄 License
+---
 
-MIT License - see [LICENSE](LICENSE) file for details
+## License
 
+MIT — see [LICENSE](LICENSE).
 
+Upstream: [glomatico/gamdl](https://github.com/glomatico/gamdl). This fork is not affiliated with Apple Inc.
