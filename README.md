@@ -11,10 +11,10 @@ Fork of [glomatico/gamdl](https://github.com/glomatico/gamdl) that adds a PlayRe
 | | glomatico/gamdl | gamdl-pr (this fork) |
 |-|-----------------|----------------------|
 | Songs | ✅ | ✅ |
-| Music videos (Widevine) | ✅ | ✅ |
-| Music videos (PlayReady) | ❌ | ✅ |
+| Music videos (WVD) | ❌ | ❌ |
+| Music videos (PRD) | ❌ | ✅ |
 | Song webplayback fallback | ❌ | ✅ |
-| Requires wrappr | optional | required for PlayReady/ALAC |
+| Requires wrappr | optional | required for Music Videos (PlayReady/ALAC) |
 | Extra install step | none | Go binary (`gamdl-playready`) |
 
 ---
