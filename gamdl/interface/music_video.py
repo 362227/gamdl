@@ -445,7 +445,8 @@ class AppleMusicMusicVideoInterface:
             decryption_key_audio = decryption_key_video
         else:
             decryption_key_audio = await get_key(audio_pssh, stream_info.media_id)
-
+        print(f"Video Key: {decryption_key_video.key}")
+        print(f"Audio Key: {decryption_key_audio.key}")
         return DecryptionKeyAv(
             video_track=decryption_key_video,
             audio_track=decryption_key_audio,
