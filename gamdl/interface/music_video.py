@@ -361,7 +361,7 @@ class AppleMusicMusicVideoInterface:
         stream_info.stream_url = playlist.uri
         stream_info.codec = playlist.stream_info.codecs
         stream_info.width, stream_info.height = playlist.stream_info.resolution
-
+        print(f"m3u8: {stream_info.stream_url}")  # 加在这里
         playlist_m3u8_obj = m3u8.loads(
             (await self.base.get_response(stream_info.stream_url)).text
         )
