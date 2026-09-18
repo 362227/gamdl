@@ -37,7 +37,7 @@ def _download_ytdlp_process(
                 "no_warnings": True,
                 "overwrites": True,
                 "noprogress": silent,
-                "allow_unplayable_formats": True,
+                "allow_unplayable_formats": False,
                 "concurrent_fragment_downloads": 8,
             }
         ) as ydl:
